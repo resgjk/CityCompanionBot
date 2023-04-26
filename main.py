@@ -45,7 +45,18 @@ def add_user_in_db(id):
     session.commit()
 
 
-@bot.message_handler(commands=["start"])
+def send_list_of_fuction(message):
+    markup = types.InlineKeyboardMarkup(row_width=1)
+    item_1 = types.InlineKeyboardButton("Прогноз погоды на день", callback_data="weather_day")
+    item_2 = types.InlineKeyboardButton("Прогноз погоды на неделю", callback_data="weather_week")
+    item_3 = types.InlineKeyboardButton("Информация об организации", callback_data="info_one_place")
+    item_4 = types.InlineKeyboardButton("Поиск мест", callback_data="list_of_places")
+    item_5 = types.InlineKeyboardButton("Поиск ближайшего места", callback_data="info_nearest_place")
+    markup.add(item_1, item_2, item_3, item_4, item_5)
+    bot.send_message(message.chat.id, "Список функций:", reply_markup=markup)
+
+
+@bot.message_handler(commands=["start", "help"])
 def start_bot(message):
     if check_user_in_db(message.from_user.id):
         bot.send_message(message.chat.id,
@@ -129,8 +140,11 @@ def info_nearest_place(message):
         site = res["features"][0]["properties"]["CompanyMetaData"]["url"]
     except Exception:
         pass
-    bot.send_message(message.chat.id, f"Название: {name}\nАдрес: {address}\nВремя работы: {work_time}\n"
-                                      f"Номер телефона: {phone}\nСайт: {site}")
+    keyboard = types.ReplyKeyboardMarkup(resize_keyboard=True, row_width=1)
+    keyboard.add("Список функций")
+    sent = bot.send_message(message.chat.id, f"Название: {name}\nАдрес: {address}\nВремя работы: {work_time}\n"
+                                             f"Номер телефона: {phone}\nСайт: {site}", reply_markup=keyboard)
+    bot.register_next_step_handler(sent, send_list_of_fuction)
 
 
 def set_user_address(message):
@@ -190,8 +204,11 @@ def return_list_of_places(message):
             site = i["properties"]["CompanyMetaData"]["url"]
         except Exception:
             pass
-        bot.send_message(message.chat.id, f"Название: {name}\nАдрес: {address}\nВремя работы: {work_time}\n"
-                                          f"Номер телефона: {phone}\nСайт: {site}")
+        keyboard = types.ReplyKeyboardMarkup(resize_keyboard=True, row_width=1)
+        keyboard.add("Список функций")
+        sent = bot.send_message(message.chat.id, f"Название: {name}\nАдрес: {address}\nВремя работы: {work_time}\n"
+                                                 f"Номер телефона: {phone}\nСайт: {site}", reply_markup=keyboard)
+        bot.register_next_step_handler(sent, send_list_of_fuction)
 
 
 def return_info_one_place(message):
@@ -235,8 +252,11 @@ def return_info_one_place(message):
         site = res["features"][0]["properties"]["CompanyMetaData"]["url"]
     except Exception:
         pass
-    bot.send_message(message.chat.id, f"Название: {name}\nАдрес: {address}\nВремя работы: {work_time}\n"
-                                      f"Номер телефона: {phone}\nСайт: {site}")
+    keyboard = types.ReplyKeyboardMarkup(resize_keyboard=True, row_width=1)
+    keyboard.add("Список функций")
+    sent = bot.send_message(message.chat.id, f"Название: {name}\nАдрес: {address}\nВремя работы: {work_time}\n"
+                                             f"Номер телефона: {phone}\nСайт: {site}", reply_markup=keyboard)
+    bot.register_next_step_handler(sent, send_list_of_fuction)
 
 
 @bot.callback_query_handler(func=lambda call: True)
@@ -268,9 +288,13 @@ def callback(call):
             wet = f'{res["fact"]["humidity"]}%'
             speed = f'{res["fact"]["wind_speed"]} м/c'
             napr = WIND_KEYS[res["fact"]["wind_dir"]]
-            bot.send_message(call.message.chat.id,
-                             f"Температура: {temp}\nОщущается как: {feels_like}\nОписание погоды: {discription}\n"
-                             f"Влажность воздуха: {wet}\nСкорость ветра: {speed}\nНаправление ветра: {napr}")
+            keyboard = types.ReplyKeyboardMarkup(resize_keyboard=True, row_width=1)
+            keyboard.add("Список функций")
+            sent = bot.send_message(call.message.chat.id,
+                                    f"Температура: {temp}\nОщущается как: {feels_like}\nОписание погоды: {discription}\n"
+                                    f"Влажность воздуха: {wet}\nСкорость ветра: {speed}\nНаправление ветра: {napr}",
+                                    reply_markup=keyboard)
+            bot.register_next_step_handler(sent, send_list_of_fuction)
         elif call.data == "weather_week":
             params = {
                 "apikey": GEOCODER_API_KEY,
@@ -291,6 +315,9 @@ def callback(call):
             }
             res = requests.get(WEATHER_API_SERVER, params=weather_params, headers=headers).json()
             days_weather = []
+            keyboard = types.ReplyKeyboardMarkup(resize_keyboard=True, row_width=1)
+            keyboard.add("Список функций")
+
             for day in res["forecasts"]:
                 d = day["date"].split("-")
                 date = f"{d[-1]}.{d[-2]}"
@@ -302,9 +329,11 @@ def callback(call):
                 napr = WIND_KEYS[day["parts"]["day"]["wind_dir"]]
                 days_weather.append([date, temp, feels_like, discription, wet, speed, napr])
             for i in days_weather:
-                bot.send_message(call.message.chat.id,
-                                 f"Дата: {i[0]}\nТемпература: {i[1]}\nОщущается как: {i[2]}\nОписание погоды: {i[3]}\n"
-                                 f"Влажность воздуха: {i[4]}\nСкорость ветра: {i[5]}\nНаправление ветра: {i[6]}")
+                sent = bot.send_message(call.message.chat.id,
+                                        f"Дата: {i[0]}\nТемпература: {i[1]}\nОщущается как: {i[2]}\nОписание погоды: {i[3]}\n"
+                                        f"Влажность воздуха: {i[4]}\nСкорость ветра: {i[5]}\nНаправление ветра: {i[6]}",
+                                        reply_markup=keyboard)
+                bot.register_next_step_handler(sent, send_list_of_fuction)
         elif call.data == "info_one_place":
             sent = bot.send_message(call.message.chat.id, "Введите адрес или название организации")
             bot.register_next_step_handler(sent, return_info_one_place)
