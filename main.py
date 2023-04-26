@@ -57,7 +57,8 @@ def start_bot(message):
         item_1 = types.InlineKeyboardButton("Прогноз погоды на день", callback_data="weather_day")
         item_2 = types.InlineKeyboardButton("Прогноз погоды на неделю", callback_data="weather_week")
         item_3 = types.InlineKeyboardButton("Информация об организации", callback_data="info_one_place")
-        markup.add(item_1, item_2, item_3)
+        item_4 = types.InlineKeyboardButton("Поиск мест", callback_data="list_of_places")
+        markup.add(item_1, item_2, item_3, item_4)
         bot.send_message(message.chat.id, "Список функций:", reply_markup=markup)
     else:
         bot.send_message(message.chat.id,
@@ -79,8 +80,50 @@ def append_city(message):
     item_1 = types.InlineKeyboardButton("Прогноз погоды на день", callback_data="weather_day")
     item_2 = types.InlineKeyboardButton("Прогноз погоды на неделю", callback_data="weather_week")
     item_3 = types.InlineKeyboardButton("Информация об организации", callback_data="info_one_place")
-    markup.add(item_1, item_2, item_3)
+    item_4 = types.InlineKeyboardButton("Поиск мест", callback_data="list_of_places")
+    markup.add(item_1, item_2, item_3, item_4)
     bot.send_message(message.chat.id, "Список функций:", reply_markup=markup)
+
+
+def return_list_of_places(message):
+    session = db_session.create_session()
+    user = session.query(User).filter(User.user_id == message.from_user.id).first()
+    params = {
+        "apikey": ORGANIZATION_API_KEY,
+        "text": f"{user.user_city} {message.text}",
+        "lang": "ru_RU",
+        "type": "biz"
+    }
+    res = requests.get(ORGANIZATION_API_SERVER, params=params).json()["features"]
+    bot.send_message(message.chat.id, f"Вот список мест по запросу: {message.text}")
+    for i in res:
+        work_time = "Не указано"
+        phone = "Не указан"
+        address = "Не указан"
+        name = "Не указано"
+        site = "Не указан"
+        try:
+            work_time = i["properties"]["CompanyMetaData"]["Hours"]["text"]
+        except Exception:
+            pass
+        try:
+            phone = i["properties"]["CompanyMetaData"]["Phones"][0]["formatted"]
+        except Exception:
+            pass
+        try:
+            address = i["properties"]["CompanyMetaData"]["address"]
+        except Exception:
+            pass
+        try:
+            name = i["properties"]["CompanyMetaData"]["name"]
+        except Exception:
+            pass
+        try:
+            site = i["properties"]["CompanyMetaData"]["url"]
+        except Exception:
+            pass
+        bot.send_message(message.chat.id, f"Название: {name}\nАдрес: {address}\nВремя работы: {work_time}\n"
+                                          f"Номер телефона: {phone}\nСайт: {site}")
 
 
 def return_info_one_place(message):
@@ -193,6 +236,9 @@ def callback(call):
         elif call.data == "info_one_place":
             sent = bot.send_message(call.message.chat.id, "Введите адрес или название организации")
             bot.register_next_step_handler(sent, return_info_one_place)
+        elif call.data == "list_of_places":
+            sent = bot.send_message(call.message.chat.id, "Какое место вы хотите найти?")
+            bot.register_next_step_handler(sent, return_list_of_places)
 
 
 def main():
