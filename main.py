@@ -105,7 +105,7 @@ def info_nearest_place(message):
     site = "Не указан"
 
     resp = requests.get(ORGANIZATION_API_SERVER, params=params)
-    if not resp:
+    if not resp.json()["properties"]["ResponseMetaData"]["SearchResponse"]["found"]:
         bot.send_message(message.chat.id, "Увы, но рядом с вами нет подходящего места(")
         return
     res = resp.json()
@@ -159,7 +159,7 @@ def return_list_of_places(message):
         "type": "biz"
     }
     resp = requests.get(ORGANIZATION_API_SERVER, params=params)
-    if not resp:
+    if not resp.json()["properties"]["ResponseMetaData"]["SearchResponse"]["found"]:
         bot.send_message(message.chat.id, "Увы, но я не смог найти подходящих вам мест(")
         return
     res = resp.json()["features"]
@@ -211,7 +211,7 @@ def return_info_one_place(message):
     site = "Не указан"
 
     resp = requests.get(ORGANIZATION_API_SERVER, params=params)
-    if not resp:
+    if not resp.json()["properties"]["ResponseMetaData"]["SearchResponse"]["found"]:
         bot.send_message(message.chat.id, "Увы, но я не смог найти информацию о данном месте(")
         return
     res = resp.json()
