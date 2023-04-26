@@ -104,7 +104,11 @@ def info_nearest_place(message):
     name = "Не указано"
     site = "Не указан"
 
-    res = requests.get(ORGANIZATION_API_SERVER, params=params).json()
+    resp = requests.get(ORGANIZATION_API_SERVER, params=params)
+    if not resp:
+        bot.send_message(message.chat.id, "Увы, но рядом с вами нет подходящего места(")
+        return
+    res = resp.json()
     try:
         work_time = res["features"][0]["properties"]["CompanyMetaData"]["Hours"]["text"]
     except Exception:
@@ -154,7 +158,11 @@ def return_list_of_places(message):
         "lang": "ru_RU",
         "type": "biz"
     }
-    res = requests.get(ORGANIZATION_API_SERVER, params=params).json()["features"]
+    resp = requests.get(ORGANIZATION_API_SERVER, params=params)
+    if not resp:
+        bot.send_message(message.chat.id, "Увы, но я не смог найти подходящих вам мест(")
+        return
+    res = resp.json()["features"]
     bot.send_message(message.chat.id, f"Вот список мест по запросу: {message.text}")
     for i in res:
         work_time = "Не указано"
@@ -202,7 +210,11 @@ def return_info_one_place(message):
     name = "Не указано"
     site = "Не указан"
 
-    res = requests.get(ORGANIZATION_API_SERVER, params=params).json()
+    resp = requests.get(ORGANIZATION_API_SERVER, params=params)
+    if not resp:
+        bot.send_message(message.chat.id, "Увы, но я не смог найти информацию о данном месте(")
+        return
+    res = resp.json()
     try:
         work_time = res["features"][0]["properties"]["CompanyMetaData"]["Hours"]["text"]
     except Exception:
