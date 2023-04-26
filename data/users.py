@@ -9,3 +9,4 @@ class User(SqlAlchemyBase):
                            primary_key=True, autoincrement=True)
     user_id = sqlalchemy.Column(sqlalchemy.Integer, unique=True)
     user_city = sqlalchemy.Column(sqlalchemy.String, default="Не указан")
+    user_address = sqlalchemy.Column(sqlalchemy.String, default="Не указан")

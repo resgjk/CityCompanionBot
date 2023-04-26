@@ -58,7 +58,8 @@ def start_bot(message):
         item_2 = types.InlineKeyboardButton("Прогноз погоды на неделю", callback_data="weather_week")
         item_3 = types.InlineKeyboardButton("Информация об организации", callback_data="info_one_place")
         item_4 = types.InlineKeyboardButton("Поиск мест", callback_data="list_of_places")
-        markup.add(item_1, item_2, item_3, item_4)
+        item_5 = types.InlineKeyboardButton("Поиск ближайшего места", callback_data="info_nearest_place")
+        markup.add(item_1, item_2, item_3, item_4, item_5)
         bot.send_message(message.chat.id, "Список функций:", reply_markup=markup)
     else:
         bot.send_message(message.chat.id,
@@ -81,8 +82,67 @@ def append_city(message):
     item_2 = types.InlineKeyboardButton("Прогноз погоды на неделю", callback_data="weather_week")
     item_3 = types.InlineKeyboardButton("Информация об организации", callback_data="info_one_place")
     item_4 = types.InlineKeyboardButton("Поиск мест", callback_data="list_of_places")
-    markup.add(item_1, item_2, item_3, item_4)
+    item_5 = types.InlineKeyboardButton("Поиск ближайшего места", callback_data="info_nearest_place")
+    markup.add(item_1, item_2, item_3, item_4, item_5)
     bot.send_message(message.chat.id, "Список функций:", reply_markup=markup)
+
+
+def info_nearest_place(message):
+    session = db_session.create_session()
+    user = session.query(User).filter(User.user_id == message.from_user.id).first()
+    params = {
+        "apikey": ORGANIZATION_API_KEY,
+        "text": f"{user.user_city} {message.text}",
+        "lang": "ru_RU",
+        "type": "biz",
+        "ll": user.user_address,
+        "results": "1"
+    }
+    work_time = "Не указано"
+    phone = "Не указан"
+    address = "Не указан"
+    name = "Не указано"
+    site = "Не указан"
+
+    res = requests.get(ORGANIZATION_API_SERVER, params=params).json()
+    try:
+        work_time = res["features"][0]["properties"]["CompanyMetaData"]["Hours"]["text"]
+    except Exception:
+        pass
+    try:
+        phone = res["features"][0]["properties"]["CompanyMetaData"]["Phones"][0]["formatted"]
+    except Exception:
+        pass
+    try:
+        address = res["features"][0]["properties"]["CompanyMetaData"]["address"]
+    except Exception:
+        pass
+    try:
+        name = res["features"][0]["properties"]["CompanyMetaData"]["name"]
+    except Exception:
+        pass
+    try:
+        site = res["features"][0]["properties"]["CompanyMetaData"]["url"]
+    except Exception:
+        pass
+    bot.send_message(message.chat.id, f"Название: {name}\nАдрес: {address}\nВремя работы: {work_time}\n"
+                                      f"Номер телефона: {phone}\nСайт: {site}")
+
+
+def set_user_address(message):
+    session = db_session.create_session()
+    user = session.query(User).filter(User.user_id == message.from_user.id).first()
+    params = {
+        "apikey": GEOCODER_API_KEY,
+        "geocode": f"{user.user_city} {message.text}",
+        "format": "json"
+    }
+    res = requests.get(GEOCODER_API_SERVER, params=params).json()
+    res_pos = ",".join(res["response"]["GeoObjectCollection"]["featureMember"][0]["GeoObject"]["Point"]["pos"].split())
+    user.user_address = res_pos
+    session.commit()
+    sent = bot.send_message(message.chat.id, "Какое место вы хотите найти?")
+    bot.register_next_step_handler(sent, info_nearest_place)
 
 
 def return_list_of_places(message):
@@ -239,6 +299,9 @@ def callback(call):
         elif call.data == "list_of_places":
             sent = bot.send_message(call.message.chat.id, "Какое место вы хотите найти?")
             bot.register_next_step_handler(sent, return_list_of_places)
+        elif call.data == "info_nearest_place":
+            sent = bot.send_message(call.message.chat.id, "Введите адрес, на котором вы находитесь")
+            bot.register_next_step_handler(sent, set_user_address)
 
 
 def main():
