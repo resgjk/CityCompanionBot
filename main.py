@@ -53,6 +53,12 @@ def start_bot(message):
                          f" жизнь в городе комфортнее и удобнее."
                          f" Ниже вы можете ознакомиться с моим функционалом.",
                          parse_mode="html")
+        markup = types.InlineKeyboardMarkup(row_width=1)
+        item_1 = types.InlineKeyboardButton("Прогноз погоды на день", callback_data="weather_day")
+        item_2 = types.InlineKeyboardButton("Прогноз погоды на неделю", callback_data="weather_week")
+        item_3 = types.InlineKeyboardButton("Информация об организации", callback_data="info_one_place")
+        markup.add(item_1, item_2, item_3)
+        bot.send_message(message.chat.id, "Список функций:", reply_markup=markup)
     else:
         bot.send_message(message.chat.id,
                          f"Приветствую, {message.from_user.first_name}! Я - бот-компаньон. Моя цель - сделать вашу"
@@ -62,12 +68,6 @@ def start_bot(message):
                          parse_mode="html")
         add_user_in_db(message.from_user.id)
 
-    markup = types.InlineKeyboardMarkup(row_width=1)
-    item_1 = types.InlineKeyboardButton("Прогноз погоды на день", callback_data="weather_day")
-    item_2 = types.InlineKeyboardButton("Прогноз погоды на неделю", callback_data="weather_week")
-    markup.add(item_1, item_2)
-    bot.send_message(message.chat.id, "Список функций:", reply_markup=markup)
-
 
 @bot.message_handler(content_types=["text"], func=lambda x: get_user_city(x.from_user.id) is None)
 def append_city(message):
@@ -75,6 +75,53 @@ def append_city(message):
     session = db_session.create_session()
     user = session.query(User).filter(User.user_id == message.from_user.id).first()
     bot.send_message(message.chat.id, f"Ваш населенный пункт: {user.user_city}", parse_mode="html")
+    markup = types.InlineKeyboardMarkup(row_width=1)
+    item_1 = types.InlineKeyboardButton("Прогноз погоды на день", callback_data="weather_day")
+    item_2 = types.InlineKeyboardButton("Прогноз погоды на неделю", callback_data="weather_week")
+    item_3 = types.InlineKeyboardButton("Информация об организации", callback_data="info_one_place")
+    markup.add(item_1, item_2, item_3)
+    bot.send_message(message.chat.id, "Список функций:", reply_markup=markup)
+
+
+def return_info_one_place(message):
+    session = db_session.create_session()
+    user = session.query(User).filter(User.user_id == message.from_user.id).first()
+    params = {
+        "apikey": ORGANIZATION_API_KEY,
+        "text": f"{user.user_city} {message.text}",
+        "lang": "ru_RU",
+        "type": "biz",
+        "results": "1"
+    }
+    work_time = "Не указано"
+    phone = "Не указан"
+    address = "Не указан"
+    name = "Не указано"
+    site = "Не указан"
+
+    res = requests.get(ORGANIZATION_API_SERVER, params=params).json()
+    try:
+        work_time = res["features"][0]["properties"]["CompanyMetaData"]["Hours"]["text"]
+    except Exception:
+        pass
+    try:
+        phone = res["features"][0]["properties"]["CompanyMetaData"]["Phones"][0]["formatted"]
+    except Exception:
+        pass
+    try:
+        address = res["features"][0]["properties"]["CompanyMetaData"]["address"]
+    except Exception:
+        pass
+    try:
+        name = res["features"][0]["properties"]["CompanyMetaData"]["name"]
+    except Exception:
+        pass
+    try:
+        site = res["features"][0]["properties"]["CompanyMetaData"]["url"]
+    except Exception:
+        pass
+    bot.send_message(message.chat.id, f"Название: {name}\nАдрес: {address}\nВремя работы: {work_time}\n"
+                                      f"Номер телефона: {phone}\nСайт: {site}")
 
 
 @bot.callback_query_handler(func=lambda call: True)
@@ -143,6 +190,9 @@ def callback(call):
                 bot.send_message(call.message.chat.id,
                                  f"Дата: {i[0]}\nТемпература: {i[1]}\nОщущается как: {i[2]}\nОписание погоды: {i[3]}\n"
                                  f"Влажность воздуха: {i[4]}\nСкорость ветра: {i[5]}\nНаправление ветра: {i[6]}")
+        elif call.data == "info_one_place":
+            sent = bot.send_message(call.message.chat.id, "Введите адрес или название организации")
+            bot.register_next_step_handler(sent, return_info_one_place)
 
 
 def main():
