@@ -52,7 +52,8 @@ def send_list_of_fuction(message):
     item_3 = types.InlineKeyboardButton("Информация об организации", callback_data="info_one_place")
     item_4 = types.InlineKeyboardButton("Поиск мест", callback_data="list_of_places")
     item_5 = types.InlineKeyboardButton("Поиск ближайшего места", callback_data="info_nearest_place")
-    markup.add(item_1, item_2, item_3, item_4, item_5)
+    item_6 = types.InlineKeyboardButton("Отметить точку назначения на карте", callback_data="return_point_on_map")
+    markup.add(item_1, item_2, item_3, item_4, item_5, item_6)
     bot.send_message(message.chat.id, "Список функций:", reply_markup=markup)
 
 
@@ -70,7 +71,8 @@ def start_bot(message):
         item_3 = types.InlineKeyboardButton("Информация об организации", callback_data="info_one_place")
         item_4 = types.InlineKeyboardButton("Поиск мест", callback_data="list_of_places")
         item_5 = types.InlineKeyboardButton("Поиск ближайшего места", callback_data="info_nearest_place")
-        markup.add(item_1, item_2, item_3, item_4, item_5)
+        item_6 = types.InlineKeyboardButton("Отметить точку назначения на карте", callback_data="return_point_on_map")
+        markup.add(item_1, item_2, item_3, item_4, item_5, item_6)
         bot.send_message(message.chat.id, "Список функций:", reply_markup=markup)
     else:
         bot.send_message(message.chat.id,
@@ -94,7 +96,8 @@ def append_city(message):
     item_3 = types.InlineKeyboardButton("Информация об организации", callback_data="info_one_place")
     item_4 = types.InlineKeyboardButton("Поиск мест", callback_data="list_of_places")
     item_5 = types.InlineKeyboardButton("Поиск ближайшего места", callback_data="info_nearest_place")
-    markup.add(item_1, item_2, item_3, item_4, item_5)
+    item_6 = types.InlineKeyboardButton("Отметить точку назначения на карте", callback_data="return_point_on_map")
+    markup.add(item_1, item_2, item_3, item_4, item_5, item_6)
     bot.send_message(message.chat.id, "Список функций:", reply_markup=markup)
 
 
@@ -147,7 +150,7 @@ def info_nearest_place(message):
     bot.register_next_step_handler(sent, send_list_of_fuction)
 
 
-def set_user_address(message):
+def set_user_address_for_nearest(message):
     session = db_session.create_session()
     user = session.query(User).filter(User.user_id == message.from_user.id).first()
     params = {
@@ -259,6 +262,50 @@ def return_info_one_place(message):
     bot.register_next_step_handler(sent, send_list_of_fuction)
 
 
+def point_on_map(message):
+    session = db_session.create_session()
+    user = session.query(User).filter(User.user_id == message.from_user.id).first()
+    params = {
+        "apikey": GEOCODER_API_KEY,
+        "geocode": f"{user.user_city} {message.text}",
+        "format": "json"
+    }
+    res = requests.get(GEOCODER_API_SERVER, params=params).json()
+    res_pos = ",".join(res["response"]["GeoObjectCollection"]["featureMember"][0]["GeoObject"]["Point"]["pos"].split())
+    print(res_pos)
+    map_params = {
+        "l": "map",
+        "ll": user.user_address,
+        "pt": f"{user.user_address},pma~{res_pos},pmb"
+    }
+    resp = requests.get(STATIC_MAPS_API_SERVER, params=map_params)
+    print(resp)
+    if not resp:
+        bot.send_message(message.chat.id, "Увы, но я не смог отметить нужные вам места(")
+        return
+    map_pic = resp.content
+    keyboard = types.ReplyKeyboardMarkup(resize_keyboard=True, row_width=1)
+    keyboard.add("Список функций")
+    sent = bot.send_photo(message.chat.id, map_pic, reply_markup=keyboard)
+    bot.register_next_step_handler(sent, send_list_of_fuction)
+
+
+def set_user_address_for_point_on_map(message):
+    session = db_session.create_session()
+    user = session.query(User).filter(User.user_id == message.from_user.id).first()
+    params = {
+        "apikey": GEOCODER_API_KEY,
+        "geocode": f"{user.user_city} {message.text}",
+        "format": "json"
+    }
+    res = requests.get(GEOCODER_API_SERVER, params=params).json()
+    res_pos = ",".join(res["response"]["GeoObjectCollection"]["featureMember"][0]["GeoObject"]["Point"]["pos"].split())
+    user.user_address = res_pos
+    session.commit()
+    sent = bot.send_message(message.chat.id, "Введите адрес места назначения")
+    bot.register_next_step_handler(sent, point_on_map)
+
+
 @bot.callback_query_handler(func=lambda call: True)
 def callback(call):
     if call.message:
@@ -342,7 +389,10 @@ def callback(call):
             bot.register_next_step_handler(sent, return_list_of_places)
         elif call.data == "info_nearest_place":
             sent = bot.send_message(call.message.chat.id, "Введите адрес, на котором вы находитесь")
-            bot.register_next_step_handler(sent, set_user_address)
+            bot.register_next_step_handler(sent, set_user_address_for_nearest)
+        elif call.data == "return_point_on_map":
+            sent = bot.send_message(call.message.chat.id, "Введите адрес, на котором вы находитесь")
+            bot.register_next_step_handler(sent, set_user_address_for_point_on_map)
 
 
 def main():
