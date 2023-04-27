@@ -94,10 +94,9 @@ def start_bot(message):
         add_user_in_db(message.from_user.id)
 
 
-@bot.message_handler(content_types=["text"])
+@bot.message_handler(content_types=["text"], func=lambda x: x.text == "Список функций")
 def get_text_and_return_menu(message):
-    if message.text == "Список функций":
-        send_list_of_fuction(message)
+    send_list_of_fuction(message)
 
 
 @bot.message_handler(content_types=["text"], func=lambda x: get_user_city(x.from_user.id) is None)
