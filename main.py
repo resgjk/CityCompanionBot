@@ -1,5 +1,3 @@
-from pprint import pprint
-
 import telebot
 from telebot import types
 from data import db_session
@@ -57,7 +55,20 @@ def send_list_of_fuction(message):
     bot.send_message(message.chat.id, "Список функций:", reply_markup=markup)
 
 
-@bot.message_handler(commands=["start", "help"])
+@bot.message_handler(commands=["help"])
+def help_bot(message):
+    keyboard = types.ReplyKeyboardMarkup(resize_keyboard=True, row_width=1)
+    keyboard.add("Список функций")
+    sent = bot.send_message(message.chat.id, "Я - робот-компаньон. Я помогу тебе комфортнее ориентироваться в городе. "
+                                             "Я могу показать вам прогноз погоды на день, либо на неделю, я могу "
+                                             "показать вам важную информацию о каком - либо месте в городе, "
+                                             "я могу найти ближайшее к вам место по вашему запросу, я могу "
+                                             "показать список мест, которые будут подходить к вашему запросу!",
+                            reply_markup=keyboard)
+    bot.register_next_step_handler(sent, send_list_of_fuction)
+
+
+@bot.message_handler(commands=["start"])
 def start_bot(message):
     if check_user_in_db(message.from_user.id):
         bot.send_message(message.chat.id,
