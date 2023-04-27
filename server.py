@@ -222,7 +222,7 @@ def return_list_of_places(message):
         keyboard.add("Список функций")
         sent = bot.send_message(message.chat.id, f"Название: {name}\nАдрес: {address}\nВремя работы: {work_time}\n"
                                                  f"Номер телефона: {phone}\nСайт: {site}", reply_markup=keyboard)
-        bot.register_next_step_handler(sent, send_list_of_fuction)
+    bot.register_next_step_handler(sent, send_list_of_fuction)
 
 
 def return_info_one_place(message):
@@ -391,7 +391,7 @@ def callback(call):
                                         f"Дата: {i[0]}\nТемпература: {i[1]}\nОщущается как: {i[2]}\nОписание погоды: {i[3]}\n"
                                         f"Влажность воздуха: {i[4]}\nСкорость ветра: {i[5]}\nНаправление ветра: {i[6]}",
                                         reply_markup=keyboard)
-                bot.register_next_step_handler(sent, send_list_of_fuction)
+            bot.register_next_step_handler(sent, send_list_of_fuction)
         elif call.data == "info_one_place":
             sent = bot.send_message(call.message.chat.id, "Введите адрес или название организации")
             bot.register_next_step_handler(sent, return_info_one_place)
