@@ -65,7 +65,6 @@ def help_bot(message):
                                              "я могу найти ближайшее к вам место по вашему запросу, я могу "
                                              "показать список мест, которые будут подходить к вашему запросу!",
                             reply_markup=keyboard)
-    bot.register_next_step_handler(sent, send_list_of_fuction)
 
 
 @bot.message_handler(commands=["start"])
@@ -93,6 +92,12 @@ def start_bot(message):
                          f" А сейчас, пожалуйста, введите ваш населенный пункт!",
                          parse_mode="html")
         add_user_in_db(message.from_user.id)
+
+
+@bot.message_handler(content_types=["text"])
+def get_text_and_return_menu(message):
+    if message.text == "Список функций":
+        send_list_of_fuction(message)
 
 
 @bot.message_handler(content_types=["text"], func=lambda x: get_user_city(x.from_user.id) is None)
@@ -158,7 +163,6 @@ def info_nearest_place(message):
     keyboard.add("Список функций")
     sent = bot.send_message(message.chat.id, f"Название: {name}\nАдрес: {address}\nВремя работы: {work_time}\n"
                                              f"Номер телефона: {phone}\nСайт: {site}", reply_markup=keyboard)
-    bot.register_next_step_handler(sent, send_list_of_fuction)
 
 
 def set_user_address_for_nearest(message):
@@ -222,7 +226,6 @@ def return_list_of_places(message):
         keyboard.add("Список функций")
         sent = bot.send_message(message.chat.id, f"Название: {name}\nАдрес: {address}\nВремя работы: {work_time}\n"
                                                  f"Номер телефона: {phone}\nСайт: {site}", reply_markup=keyboard)
-    bot.register_next_step_handler(sent, send_list_of_fuction)
 
 
 def return_info_one_place(message):
@@ -270,7 +273,6 @@ def return_info_one_place(message):
     keyboard.add("Список функций")
     sent = bot.send_message(message.chat.id, f"Название: {name}\nАдрес: {address}\nВремя работы: {work_time}\n"
                                              f"Номер телефона: {phone}\nСайт: {site}", reply_markup=keyboard)
-    bot.register_next_step_handler(sent, send_list_of_fuction)
 
 
 def point_on_map(message):
@@ -298,7 +300,6 @@ def point_on_map(message):
     keyboard = types.ReplyKeyboardMarkup(resize_keyboard=True, row_width=1)
     keyboard.add("Список функций")
     sent = bot.send_photo(message.chat.id, map_pic, reply_markup=keyboard)
-    bot.register_next_step_handler(sent, send_list_of_fuction)
 
 
 def set_user_address_for_point_on_map(message):
@@ -352,7 +353,6 @@ def callback(call):
                                     f"Температура: {temp}\nОщущается как: {feels_like}\nОписание погоды: {discription}\n"
                                     f"Влажность воздуха: {wet}\nСкорость ветра: {speed}\nНаправление ветра: {napr}",
                                     reply_markup=keyboard)
-            bot.register_next_step_handler(sent, send_list_of_fuction)
         elif call.data == "weather_week":
             params = {
                 "apikey": GEOCODER_API_KEY,
@@ -391,7 +391,6 @@ def callback(call):
                                         f"Дата: {i[0]}\nТемпература: {i[1]}\nОщущается как: {i[2]}\nОписание погоды: {i[3]}\n"
                                         f"Влажность воздуха: {i[4]}\nСкорость ветра: {i[5]}\nНаправление ветра: {i[6]}",
                                         reply_markup=keyboard)
-            bot.register_next_step_handler(sent, send_list_of_fuction)
         elif call.data == "info_one_place":
             sent = bot.send_message(call.message.chat.id, "Введите адрес или название организации")
             bot.register_next_step_handler(sent, return_info_one_place)
